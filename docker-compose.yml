@@ -28,6 +28,24 @@ services:
       timeout: 5s
       retries: 5
 
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0-ubuntu2204
+    platform: linux/arm64/v8
+    container_name: mini-env-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./mongodb/data:/data/db
+      - ./mongodb/logs:/var/log/mongodb
+      - ./mongodb/config:/etc/mongo
+    networks:
+      - mini-env-network
+    mem_limit: 512m
+    memswap_limit: 512m
+
   redis:
     image: redis:7-alpine
     platform: linux/arm64/v8

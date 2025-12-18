@@ -1,16 +1,19 @@
-# mini-env
+## mini-env 本地开发环境
 
-本地开发环境 Docker Compose 配置
+`mini-env` 是一个基于 Docker Compose 的本地开发环境，内置常用中间件，开箱即用，已针对 **Mac M4 (Apple Silicon)** 进行优化。
 
-## 包含的中间件
+### 已集成的中间件
 
-- MySQL 8.0 (支持 Mac M4 芯片，使用 linux/amd64 平台通过 Rosetta 2 运行)
-- Redis 7 (Alpine，原生支持 ARM64，在 M4 芯片上使用 linux/arm64/v8 平台)
-- XXL-JOB 2.3.1 (分布式任务调度平台)
+- **MySQL 8.0**：支持 Mac M4，使用 `platform: linux/amd64` 通过 Rosetta 2 运行
+- **Redis 7 (Alpine)**：原生 ARM64，`platform: linux/arm64/v8`
+- **MongoDB 7.0 Community Server**：镜像 `mongodb/mongodb-community-server:7.0-ubuntu2204`，原生 ARM64
+- **XXL-JOB 2.3.1**：分布式任务调度平台
 
-## 目录结构
+---
 
-```
+## 项目结构
+
+```bash
 mini-env/
 ├── docker-compose.yml
 ├── mysql/
@@ -18,26 +21,32 @@ mini-env/
 │   ├── data/            # MySQL 数据目录（已加入 .gitignore）
 │   ├── logs/            # MySQL 日志目录（已加入 .gitignore）
 │   └── init/            # MySQL 初始化 SQL 脚本目录
+├── mongodb/
+│   ├── config/          # MongoDB 配置文件
+│   ├── data/            # MongoDB 数据目录
+│   └── logs/            # MongoDB 日志目录
 ├── redis/
 │   ├── config/          # Redis 配置文件
 │   ├── data/            # Redis 数据目录（已加入 .gitignore）
 │   └── logs/            # Redis 日志目录（已加入 .gitignore）
 ├── xxl-job/
-│   ├── Dockerfile        # XXL-JOB 镜像构建文件
-│   ├── xxl-job-admin-2.3.1.jar  # XXL-JOB JAR 包
-│   └── logs/            # XXL-JOB 日志目录（已加入 .gitignore）
+│   ├── Dockerfile                  # XXL-JOB 镜像构建文件
+│   ├── xxl-job-admin-2.3.1.jar     # XXL-JOB JAR 包
+│   └── logs/                      # XXL-JOB 日志目录（已加入 .gitignore）
 └── README.md
 ```
 
-## 使用方法
+---
 
-### 启动服务
+## 快速开始
+
+### 启动全部服务
 
 ```bash
 docker-compose up -d
 ```
 
-### 停止服务
+### 停止全部服务
 
 ```bash
 docker-compose down
@@ -52,50 +61,30 @@ docker-compose logs -f
 # 查看特定服务日志
 docker-compose logs -f mysql
 docker-compose logs -f redis
+docker-compose logs -f mongodb
+docker-compose logs -f xxl-job
 ```
 
-### 重启服务
+### 重启全部服务
 
 ```bash
 docker-compose restart
 ```
 
-## MySQL 初始化 SQL
+---
 
-MySQL 容器首次启动时（数据目录为空时），会自动执行 `mysql/init/` 目录下的 SQL 文件。
-
-- 支持 `.sql`、`.sh`、`.sql.gz` 格式的文件
-- 文件按文件名排序执行（建议使用数字前缀，如 `01-init.sql`）
-- 只有在数据目录为空时才会执行
-- 如需重新执行初始化，需要先删除数据目录：`rm -rf mysql/data/*`
-
-示例文件：
-- `mysql/init/01-init.sql` - 通用初始化脚本示例
-- `mysql/init/02-xxl-job.sql` - XXL-JOB 数据库初始化脚本
-
-### XXL-JOB 数据库初始化
-
-`02-xxl-job.sql` 文件包含了基本的表结构。如需完整脚本，请从 GitHub 获取：
-
-```bash
-# 下载完整的 XXL-JOB 初始化 SQL 脚本
-curl -o mysql/init/02-xxl-job.sql https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql
-```
-
-或者访问：https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql
-
-## 连接信息
+## 服务详情与连接信息
 
 ### MySQL
 
-- **主机 (Host)**: `localhost` 或 `127.0.0.1`
-- **端口 (Port)**: `3306`
-- **用户名 (Username)**: `root`
-- **密码 (Password)**: `root123`
+- **镜像**: `mysql:8.0`
+- **平台**: `linux/amd64`
+- **端口**: `3306`
+- **用户名**: `root`
+- **密码**: `root123`
 
-#### 连接示例
+**命令行连接示例：**
 
-**命令行连接：**
 ```bash
 # 使用 mysql 客户端
 mysql -h localhost -P 3306 -u root -p
@@ -106,7 +95,8 @@ mysql -h localhost -P 3306 -u root -proot123
 ```
 
 **连接字符串示例：**
-```
+
+```text
 # JDBC (Java)
 jdbc:mysql://localhost:3306/?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
 
@@ -120,21 +110,49 @@ mysql://root:root123@localhost:3306/
 root:root123@tcp(localhost:3306)/
 ```
 
-**常见数据库客户端：**
+**常见客户端：**
+
 - **DBeaver**: Host: `localhost`, Port: `3306`, User: `root`, Password: `root123`
 - **Navicat**: 主机: `localhost`, 端口: `3306`, 用户名: `root`, 密码: `root123`
-- **MySQL Workbench**: 连接方式选择 "Standard TCP/IP"，主机: `localhost`, 端口: `3306`, 用户名: `root`, 密码: `root123`
+- **MySQL Workbench**: 连接方式 "Standard TCP/IP"，主机: `localhost`, 端口: `3306`, 用户名: `root`, 密码: `root123`
 - **TablePlus**: Host: `localhost`, Port: `3306`, User: `root`, Password: `root123`
+
+#### MySQL 初始化 SQL
+
+MySQL 容器首次启动时（数据目录为空时），会自动执行 `mysql/init/` 目录下的 SQL 文件：
+
+- 支持 `.sql`、`.sh`、`.sql.gz` 格式
+- 按文件名排序执行（建议使用数字前缀，如 `01-init.sql`）
+- 仅在数据目录为空时执行
+- 如需重新执行初始化，需要先删除数据目录：`rm -rf mysql/data/*`
+
+示例文件：
+
+- `mysql/init/01-init.sql` - 通用初始化脚本示例
+- `mysql/init/02-xxl-job.sql` - XXL-JOB 数据库初始化脚本
+
+**XXL-JOB 数据库初始化脚本：**
+
+`02-xxl-job.sql` 包含基本表结构。如需官方最新版脚本，可执行：
+
+```bash
+curl -o mysql/init/02-xxl-job.sql https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql
+```
+
+或直接访问：  
+`https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql`
+
+---
 
 ### Redis
 
-- **主机 (Host)**: `localhost` 或 `127.0.0.1`
-- **端口 (Port)**: `6379`
+- **镜像**: `redis:7-alpine`
+- **平台**: `linux/arm64/v8`
+- **端口**: `6379`
 - **密码**: 无（开发环境）
 
-#### 连接示例
+**命令行连接示例：**
 
-**命令行连接：**
 ```bash
 # 使用 redis-cli
 redis-cli -h localhost -p 6379
@@ -144,7 +162,8 @@ redis-cli
 ```
 
 **连接字符串示例：**
-```
+
+```text
 # Redis URI
 redis://localhost:6379
 
@@ -155,78 +174,109 @@ redis://localhost:6379/0
 redis://localhost:6379
 ```
 
+---
+
+### MongoDB
+
+- **镜像**: `mongodb/mongodb-community-server:7.0-ubuntu2204`
+- **平台**: `linux/arm64/v8`
+- **端口**: `27017`
+- **认证**: 默认无认证（开发环境，可在配置中开启）
+
+**命令行连接示例：**
+
+```bash
+# 使用 mongo shell / mongosh
+mongosh "mongodb://localhost:27017"
+```
+
+**连接字符串示例：**
+
+```text
+# 通用 MongoDB URI
+mongodb://localhost:27017
+
+# Node.js (mongoose / 官方驱动)
+mongodb://localhost:27017/test
+
+# Java (MongoDB Java Driver)
+mongodb://localhost:27017
+
+# Python (pymongo)
+mongodb://localhost:27017
+```
+
+---
+
 ### XXL-JOB
 
-- **Web 管理界面**: http://localhost:8080/xxl-job-admin
+- **Web 管理界面**: `http://localhost:8080/xxl-job-admin`
 - **默认用户名**: `admin`
 - **默认密码**: `123456`
-- **数据库**: `xxl_job` (在 MySQL 中)
+- **数据库**: `xxl_job`（存储在 MySQL 中）
 
-## 内存优化
+**启动顺序建议：**
 
-- **MySQL**: 限制内存使用 **512MB**
-  - InnoDB Buffer Pool: 128MB（优化后的配置）
+1. 先启动基础服务：
+
+   ```bash
+   docker-compose up -d mysql redis mongodb
+   ```
+
+2. 确认 MySQL 健康后启动 XXL-JOB：
+
+   ```bash
+   docker-compose up -d xxl-job
+   ```
+
+---
+
+## 内存与性能配置
+
+- **MySQL**：限制内存 **512MB**
+  - InnoDB Buffer Pool: 128MB（优化配置）
   - 最大连接数: 50（从 200 降低）
-  - 各种缓冲区已最小化配置
-  - 关闭慢查询日志以节省内存
-- **Redis**: 限制内存使用 **256MB**，最大内存 200MB
-- **XXL-JOB**: 限制内存使用 **512MB**
+  - 各类缓冲区尽量缩小
+  - 关闭慢查询日志以节省资源
+- **Redis**：限制内存 **256MB**，最大内存约 **200MB**
+- **MongoDB**：容器内存限制 **512MB**
+- **XXL-JOB**：容器内存限制 **512MB**
 
-> **注意**: 
-> - 如果遇到性能问题，可以适当增加 `innodb_buffer_pool_size` 到 192M 或更高
-> - 如果连接数不足，可以增加 `max_connections` 到 100
+> **注意：**
+> - 如果遇到性能瓶颈，可适当增大 `innodb_buffer_pool_size` 到 192M 或更高  
+> - 如果连接数不足，可将 `max_connections` 提升到 100
 
-## Mac M4 芯片兼容性
+---
 
-本配置已针对 Mac M4 (Apple Silicon) 芯片进行优化：
+## Mac M4 芯片兼容性说明
 
-- **MySQL 8.0**: 使用 `platform: linux/amd64`，通过 Rosetta 2 转译运行，确保兼容性
-- **Redis 7**: 使用 `platform: linux/arm64/v8`，原生 ARM64 支持，性能更优
-- **XXL-JOB**: 基于 OpenJDK 8，使用 `platform: linux/amd64`，通过 Rosetta 2 转译运行
+本项目已在 **Mac M4 (Apple Silicon)** 上测试通过，并针对平台做了优化：
 
-所有镜像均已在 M4 芯片上测试通过。
+- **MySQL 8.0**：`platform: linux/amd64`，通过 Rosetta 2 转译运行，保证兼容性
+- **Redis 7**：`platform: linux/arm64/v8`，原生 ARM64，性能更优
+- **MongoDB 7.0 Community Server**：`platform: linux/arm64/v8`，原生 ARM64
+- **XXL-JOB**：基于 OpenJDK 8，`platform: linux/amd64`，通过 Rosetta 2 转译运行
 
-## 构建和启动
+---
 
-### 首次启动
+## 自定义与扩展
 
-```bash
-# 构建 XXL-JOB 镜像（首次需要）
-docker-compose build xxl-job
+### 添加新的中间件
 
-# 启动所有服务
-docker-compose up -d
-```
-
-### 仅启动基础服务（不包含 XXL-JOB）
+建议遵循统一目录结构：
 
 ```bash
-docker-compose up -d mysql redis
-```
-
-### 启动 XXL-JOB
-
-```bash
-# 确保 MySQL 已启动并健康
-docker-compose up -d xxl-job
-```
-
-## 添加新的中间件
-
-当需要添加新的中间件时，请遵循以下目录结构：
-
-```
 {中间件名称}/
 ├── config/          # 配置文件
 ├── data/            # 数据目录
 └── logs/            # 日志目录
 ```
 
-并在 `docker-compose.yml` 中添加相应的服务配置。
+然后在 `docker-compose.yml` 中增加对应服务配置即可。
 
-## 重新初始化 MySQL
+### 重新初始化 MySQL
 
-如果需要重新执行初始化 SQL（例如修改了初始化脚本），需要：
+如果需要重新执行初始化 SQL（例如修改了初始化脚本），操作步骤如下：
 
 ```bash
 # 停止容器
