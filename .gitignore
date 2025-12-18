@@ -6,6 +6,8 @@ redis/logs/
 xxl-job/logs/
 mongodb/data/
 mongodb/logs/
+rocketmq/store/
+rocketmq/logs/
 
 # 日志文件
 *.log

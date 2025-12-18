@@ -20,8 +20,10 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     networks:
       - mini-env-network
-    mem_limit: 512m
-    memswap_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
       interval: 10s
@@ -43,8 +45,81 @@ services:
       - ./mongodb/config:/etc/mongo
     networks:
       - mini-env-network
-    mem_limit: 512m
-    memswap_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.2
+    platform: linux/amd64
+    container_name: mini-env-rocketmq-namesrv
+    restart: unless-stopped
+    ports:
+      - "9876:9876"   # NameServer
+    environment:
+      TZ: Asia/Shanghai
+      # 仅限制堆大小，避免与镜像内默认 GC 选项冲突
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn128m -XX:+ExitOnOutOfMemoryError"
+    command: >
+      sh -c "cd /home/rocketmq/rocketmq-5.3.2/bin &&
+      ./mqnamesrv"
+    volumes:
+      - ./rocketmq/logs:/home/rocketmq/logs
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.2
+    platform: linux/amd64
+    container_name: mini-env-rocketmq-broker
+    restart: unless-stopped
+    ports:
+      - "10911:10911" # Broker
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      # 同样只控制堆大小，GC 策略使用镜像默认配置
+      JAVA_OPT_EXT: "-server -Xms1g -Xmx1g -Xmn256m -XX:+ExitOnOutOfMemoryError"
+    command: >
+      sh -c "cd /home/rocketmq/rocketmq-5.3.2/bin &&
+      ./mqbroker -n rocketmq-namesrv:9876 autoCreateTopicEnable=true"
+    volumes:
+      - ./rocketmq/store:/home/rocketmq/store
+      - ./rocketmq/logs:/home/rocketmq/logs
+      - ./rocketmq/conf:/home/rocketmq/conf
+    depends_on:
+      - rocketmq-namesrv
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    platform: linux/amd64
+    container_name: mini-env-rocketmq-dashboard
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      TZ: Asia/Shanghai
+      ROCKETMQ_CONFIG_NAMESRV_ADDR: rocketmq-namesrv:9876
+    depends_on:
+      - rocketmq-namesrv
+      - rocketmq-broker
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   redis:
     image: redis:7-alpine
@@ -60,8 +135,10 @@ services:
     command: redis-server /usr/local/etc/redis/redis.conf
     networks:
       - mini-env-network
-    mem_limit: 256m
-    memswap_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -78,6 +155,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx256m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
     volumes:
       - ./xxl-job/logs:/app/logs
       - ./xxl-job/config:/app/config
@@ -86,8 +165,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    mem_limit: 512m
-    memswap_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
 networks:
   mini-env-network:

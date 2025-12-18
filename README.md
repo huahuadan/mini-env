@@ -7,6 +7,7 @@
 - **MySQL 8.0**：支持 Mac M4，使用 `platform: linux/amd64` 通过 Rosetta 2 运行
 - **Redis 7 (Alpine)**：原生 ARM64，`platform: linux/arm64/v8`
 - **MongoDB 7.0 Community Server**：镜像 `mongodb/mongodb-community-server:7.0-ubuntu2204`，原生 ARM64
+- **RocketMQ 5.3.2 & Dashboard**：镜像 `apache/rocketmq:5.3.2` 与 `apacherocketmq/rocketmq-dashboard:latest`
 - **XXL-JOB 2.3.1**：分布式任务调度平台
 
 ---
@@ -25,6 +26,10 @@ mini-env/
 │   ├── config/          # MongoDB 配置文件
 │   ├── data/            # MongoDB 数据目录
 │   └── logs/            # MongoDB 日志目录
+├── rocketmq/
+│   ├── conf/           # RocketMQ 配置文件（可选）
+│   ├── store/          # RocketMQ 存储目录（已加入 .gitignore）
+│   └── logs/           # RocketMQ 日志目录（已加入 .gitignore）
 ├── redis/
 │   ├── config/          # Redis 配置文件
 │   ├── data/            # Redis 数据目录（已加入 .gitignore）
@@ -63,6 +68,9 @@ docker-compose logs -f mysql
 docker-compose logs -f redis
 docker-compose logs -f mongodb
 docker-compose logs -f xxl-job
+docker-compose logs -f rocketmq-namesrv
+docker-compose logs -f rocketmq-broker
+docker-compose logs -f rocketmq-dashboard
 ```
 
 ### 重启全部服务
@@ -205,6 +213,29 @@ mongodb://localhost:27017
 # Python (pymongo)
 mongodb://localhost:27017
 ```
+
+---
+
+### RocketMQ & Dashboard
+
+- **RocketMQ 镜像**: `apache/rocketmq:5.3.2`
+- **平台**: `linux/amd64`
+- **端口**:
+  - NameServer: `9876`
+  - Broker: `10911`
+- **Dashboard 镜像**: `apacherocketmq/rocketmq-dashboard:latest`
+- **Dashboard 地址**: `http://localhost:8081`（容器内为 8080，对外映射为 8081，避免与 XXL-JOB 冲突）
+
+在 `docker-compose.yml` 中，RocketMQ 以「单机模式」运行：容器内同时启动 NameServer 和 Broker，并允许自动创建 Topic（`autoCreateTopicEnable=true`），适合本地开发调试。
+
+**客户端连接示例（Java）：**
+
+```text
+# NameServer 地址
+namesrvAddr=localhost:9876
+```
+
+Dashboard 会通过环境变量 `ROCKETMQ_CONFIG_NAMESRV_ADDR=mini-env-rocketmq:9876` 自动连接到 RocketMQ。
 
 ---
 
