@@ -9,6 +9,7 @@
 - **MongoDB 7.0 Community Server**：镜像 `mongodb/mongodb-community-server:7.0-ubuntu2204`，原生 ARM64
 - **RocketMQ 5.3.2 & Dashboard**：镜像 `apache/rocketmq:5.3.2` 与 `apacherocketmq/rocketmq-dashboard:latest`
 - **XXL-JOB 2.3.1**：分布式任务调度平台
+- **Prometheus + Grafana**：监控与可视化平台，采集 MySQL/Redis/MongoDB 等中间件指标
 
 ---
 
@@ -30,6 +31,12 @@ mini-env/
 │   ├── conf/           # RocketMQ 配置文件（可选）
 │   ├── store/          # RocketMQ 存储目录（已加入 .gitignore）
 │   └── logs/           # RocketMQ 日志目录（已加入 .gitignore）
+├── prometheus/
+│   ├── config/         # Prometheus 配置（prometheus.yml）
+│   └── data/           # Prometheus 本地数据目录（已加入 .gitignore）
+├── grafana/
+│   ├── data/           # Grafana 数据目录（已加入 .gitignore）
+│   └── logs/           # Grafana 日志目录（已加入 .gitignore）
 ├── redis/
 │   ├── config/          # Redis 配置文件
 │   ├── data/            # Redis 数据目录（已加入 .gitignore）
@@ -71,6 +78,8 @@ docker-compose logs -f xxl-job
 docker-compose logs -f rocketmq-namesrv
 docker-compose logs -f rocketmq-broker
 docker-compose logs -f rocketmq-dashboard
+docker-compose logs -f prometheus
+docker-compose logs -f grafana
 ```
 
 ### 重启全部服务
@@ -236,6 +245,71 @@ namesrvAddr=localhost:9876
 ```
 
 Dashboard 会通过环境变量 `ROCKETMQ_CONFIG_NAMESRV_ADDR=mini-env-rocketmq:9876` 自动连接到 RocketMQ。
+
+---
+
+### Prometheus & Grafana（监控）
+
+- **Prometheus 镜像**: `prom/prometheus:v2.54.0`
+- **平台**: `linux/arm64/v8`
+- **端口**: `9090`
+- **Grafana 镜像**: `grafana/grafana:10.4.3`
+- **平台**: `linux/arm64`
+- **端口**: `3000`
+- **Grafana 默认账号**: 用户名 `admin` / 密码 `admin`
+
+Prometheus 使用 `prometheus/config/prometheus.yml` 作为配置文件，当前已内置以下采集任务：
+
+- `mysql`：采集 `mysql-exporter:9104`（MySQL 指标）
+- `redis`：采集 `redis-exporter:9121`（Redis 指标）
+- `mongodb`：采集 `mongodb-exporter:9216`（MongoDB 指标）
+- `rocketmq`：采集 `rocketmq-exporter:5557`（RocketMQ 指标）
+
+启动后可通过以下地址访问：
+
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+
+在 Grafana 中添加 Prometheus 数据源时，URL 填写：
+
+```text
+http://prometheus:9090
+```
+
+然后可以导入官方或社区 Dashboard（如 MySQL、Redis、MongoDB 的监控面板）进行可视化。
+
+#### 推荐 Grafana 看板（Dashboard）
+
+- **MySQL 监控**
+  - **Dashboard 名称**: MySQL Overview
+  - **Grafana.com ID**: `7362`
+- **MongoDB 监控**
+  - **Dashboard 名称**: MongoDB Overview
+  - **Grafana.com ID**: `2583`
+- **Redis 监控**
+  - **Dashboard 名称**: Redis Dashboard for Prometheus Redis Exporter 1.x
+  - **Grafana.com ID**: `14091`
+
+在 Grafana 中导入看板步骤：
+
+1. 左侧点击 **“+” -> “Import”**
+2. 在 **“Import via grafana.com”** 输入框中填入上面的 **Dashboard ID**（例如 `7362`），点击 **“Load”**
+3. 选择 Prometheus 数据源（URL 为 `http://prometheus:9090`）
+4. 点击 **“Import”** 完成导入
+
+#### 在 Grafana 中创建 Prometheus 数据源
+
+> 默认 Grafana 不会自动创建数据源，第一次使用需要手动配置一次。
+
+1. 访问 Grafana: `http://localhost:3000`，使用默认账号登录：用户名 `admin` / 密码 `admin`（首次会要求修改密码）
+2. 左侧点击 **“齿轮图标 Settings -> Data sources”**
+3. 点击右上角 **“Add data source”**
+4. 在列表中选择 **Prometheus**
+5. 在配置页面中设置：
+   - **Name**: `Prometheus`（任意）
+   - **URL**: `http://prometheus:9090`
+   - 其他保持默认
+6. 滚动到页面底部，点击 **“Save & test”**，看到 “Data source is working” 即表示配置成功
 
 ---
 

@@ -8,6 +8,9 @@ mongodb/data/
 mongodb/logs/
 rocketmq/store/
 rocketmq/logs/
+prometheus/data/
+grafana/data/
+grafana/logs/
 
 # 日志文件
 *.log

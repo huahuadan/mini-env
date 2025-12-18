@@ -1,0 +1,7 @@
+[client]
+user=root
+password=root123
+host=mini-env-mysql
+port=3306
+
+

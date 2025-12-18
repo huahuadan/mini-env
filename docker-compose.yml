@@ -121,6 +121,111 @@ services:
         limits:
           memory: 256m
 
+  rocketmq-exporter:
+    image: apache/rocketmq-exporter:latest
+    platform: linux/amd64
+    container_name: mini-env-rocketmq-exporter
+    restart: unless-stopped
+    ports:
+      - "5557:5557"
+    environment:
+      TZ: Asia/Shanghai
+      ROCKETMQ_CONFIG_NAMESRV_ADDR: rocketmq-namesrv:9876
+    depends_on:
+      - rocketmq-namesrv
+      - rocketmq-broker
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    platform: linux/amd64
+    container_name: mini-env-mysql-exporter
+    restart: unless-stopped
+    # 使用 .my.cnf 配置连接信息，避免启动时反复报 no user specified
+    volumes:
+      - ./mysql/config/mysqld_exporter.cnf:/etc/mysql/.my.cnf:ro
+    command:
+      - "--config.my-cnf=/etc/mysql/.my.cnf"
+    ports:
+      - "9104:9104"
+    networks:
+      - mini-env-network
+    depends_on:
+      - mysql
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.64.0
+    platform: linux/amd64
+    container_name: mini-env-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://mini-env-redis:6379"
+    ports:
+      - "9121:9121"
+    networks:
+      - mini-env-network
+    depends_on:
+      - redis
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40.0
+    platform: linux/amd64
+    container_name: mini-env-mongodb-exporter
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: "mongodb://mini-env-mongodb:27017"
+    command:
+      - --collect-all
+    ports:
+      - "9216:9216"
+    networks:
+      - mini-env-network
+    depends_on:
+      - mongodb
+
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    platform: linux/arm64/v8
+    container_name: mini-env-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/data:/prometheus
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    platform: linux/arm64
+    container_name: mini-env-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      TZ: Asia/Shanghai
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/logs:/var/log/grafana
+    networks:
+      - mini-env-network
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
   redis:
     image: redis:7-alpine
     platform: linux/arm64/v8
