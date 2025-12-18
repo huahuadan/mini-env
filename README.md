@@ -6,6 +6,7 @@
 
 - MySQL 8.0 (支持 Mac M4 芯片，使用 linux/amd64 平台通过 Rosetta 2 运行)
 - Redis 7 (Alpine，原生支持 ARM64，在 M4 芯片上使用 linux/arm64/v8 平台)
+- XXL-JOB 2.3.1 (分布式任务调度平台)
 
 ## 目录结构
 
@@ -21,6 +22,10 @@ mini-env/
 │   ├── config/          # Redis 配置文件
 │   ├── data/            # Redis 数据目录（已加入 .gitignore）
 │   └── logs/            # Redis 日志目录（已加入 .gitignore）
+├── xxl-job/
+│   ├── Dockerfile        # XXL-JOB 镜像构建文件
+│   ├── xxl-job-admin-2.3.1.jar  # XXL-JOB JAR 包
+│   └── logs/            # XXL-JOB 日志目录（已加入 .gitignore）
 └── README.md
 ```
 
@@ -64,7 +69,20 @@ MySQL 容器首次启动时（数据目录为空时），会自动执行 `mysql/
 - 只有在数据目录为空时才会执行
 - 如需重新执行初始化，需要先删除数据目录：`rm -rf mysql/data/*`
 
-示例文件：`mysql/init/01-init.sql`
+示例文件：
+- `mysql/init/01-init.sql` - 通用初始化脚本示例
+- `mysql/init/02-xxl-job.sql` - XXL-JOB 数据库初始化脚本
+
+### XXL-JOB 数据库初始化
+
+`02-xxl-job.sql` 文件包含了基本的表结构。如需完整脚本，请从 GitHub 获取：
+
+```bash
+# 下载完整的 XXL-JOB 初始化 SQL 脚本
+curl -o mysql/init/02-xxl-job.sql https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql
+```
+
+或者访问：https://raw.githubusercontent.com/xuxueli/xxl-job/master/doc/db/tables_xxl_job.sql
 
 ## 连接信息
 
@@ -137,6 +155,13 @@ redis://localhost:6379/0
 redis://localhost:6379
 ```
 
+### XXL-JOB
+
+- **Web 管理界面**: http://localhost:8080/xxl-job-admin
+- **默认用户名**: `admin`
+- **默认密码**: `123456`
+- **数据库**: `xxl_job` (在 MySQL 中)
+
 ## 内存优化
 
 - **MySQL**: 限制内存使用 **512MB**
@@ -145,6 +170,7 @@ redis://localhost:6379
   - 各种缓冲区已最小化配置
   - 关闭慢查询日志以节省内存
 - **Redis**: 限制内存使用 **256MB**，最大内存 200MB
+- **XXL-JOB**: 限制内存使用 **512MB**
 
 > **注意**: 
 > - 如果遇到性能问题，可以适当增加 `innodb_buffer_pool_size` 到 192M 或更高
@@ -156,8 +182,34 @@ redis://localhost:6379
 
 - **MySQL 8.0**: 使用 `platform: linux/amd64`，通过 Rosetta 2 转译运行，确保兼容性
 - **Redis 7**: 使用 `platform: linux/arm64/v8`，原生 ARM64 支持，性能更优
+- **XXL-JOB**: 基于 OpenJDK 8，使用 `platform: linux/amd64`，通过 Rosetta 2 转译运行
 
 所有镜像均已在 M4 芯片上测试通过。
+
+## 构建和启动
+
+### 首次启动
+
+```bash
+# 构建 XXL-JOB 镜像（首次需要）
+docker-compose build xxl-job
+
+# 启动所有服务
+docker-compose up -d
+```
+
+### 仅启动基础服务（不包含 XXL-JOB）
+
+```bash
+docker-compose up -d mysql redis
+```
+
+### 启动 XXL-JOB
+
+```bash
+# 确保 MySQL 已启动并健康
+docker-compose up -d xxl-job
+```
 
 ## 添加新的中间件
 

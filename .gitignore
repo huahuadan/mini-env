@@ -3,6 +3,7 @@ mysql/data/
 mysql/logs/
 redis/data/
 redis/logs/
+xxl-job/logs/
 
 # 日志文件
 *.log

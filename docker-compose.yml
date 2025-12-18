@@ -50,6 +50,27 @@ services:
       timeout: 3s
       retries: 5
 
+  xxl-job:
+    build:
+      context: ./xxl-job
+      dockerfile: Dockerfile
+    image: mini-env-xxl-job:2.3.1
+    platform: linux/amd64
+    container_name: mini-env-xxl-job
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./xxl-job/logs:/app/logs
+      - ./xxl-job/config:/app/config
+    networks:
+      - mini-env-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    mem_limit: 512m
+    memswap_limit: 512m
+
 networks:
   mini-env-network:
     driver: bridge
